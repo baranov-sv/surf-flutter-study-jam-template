@@ -19,8 +19,8 @@ class ChatRepositoryFirebase implements ChatRepository {
   Future<List<ChatMessageDto>> get messages async {
     final result = await _firebaseClient
         .collection(_messagesCollectionKey)
-        .limit(_messagesLimit)
-        .orderBy('created')
+        // .limit(_messagesLimit)
+        .orderBy('created', descending: true)
         .get();
 
     return result.docs.map(_parseFirebaseDataToLocal).toList();
