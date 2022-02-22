@@ -5,6 +5,7 @@ import 'package:surf_practice_chat_flutter/enums.dart';
 import 'package:surf_practice_chat_flutter/constants.dart';
 import 'package:surf_practice_chat_flutter/data/chat/application_state.dart';
 import 'package:surf_practice_chat_flutter/data/chat/models/message.dart';
+import 'package:surf_practice_chat_flutter/data/chat/models/user.dart';
 
 /// Chat screen templete. This is your starting point.
 class ChatScreen extends StatelessWidget {
@@ -35,7 +36,6 @@ class ChatScreen extends StatelessWidget {
             child: Consumer<ApplicationState>(
                 builder: (context, appState, _) => ListMessages(
                     nicknameState: appState.nicknameState,
-                    nickname: appState.nickname,
                     loadingMessagesState: appState.loadingMessagesState,
                     messages: appState.messages))),
         Container(
@@ -71,14 +71,12 @@ class LoadingButton extends StatelessWidget {
 
 class ListMessages extends StatelessWidget {
   final ApplicationNicknameState nicknameState;
-  final String? nickname;
   final ApplicationLoadingMessagesState loadingMessagesState;
   final List<ChatMessageDto> messages;
 
   const ListMessages(
       {Key? key,
       required this.nicknameState,
-      required this.nickname,
       required this.loadingMessagesState,
       required this.messages})
       : super(key: key);
@@ -101,39 +99,24 @@ class ListMessages extends StatelessWidget {
                 final message = messages[i];
                 return Container(
                     padding: const EdgeInsets.all(8.0),
-                    color: nickname == message.author.name
+                    color: message.author is ChatUserLocalDto
                         ? ColorConstants.primaryColor.withOpacity(0.2)
                         : null,
-                    child: Row(
-                      children: [
-                        Avatar(
-                          name: message.author.name,
-                        ),
-                        Expanded(
-                            child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(message.author.name,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                              Text(message.message)
-                            ],
-                          ),
-                        ))
-                      ],
-                    ));
+                    child: message is ChatMessageGeolocationDto
+                        ? _MessageGeolocation(message: message)
+                        : _Message(
+                            message: message,
+                          ));
               }),
         );
     }
   }
 }
 
-class Avatar extends StatelessWidget {
+class _Avatar extends StatelessWidget {
   final String name;
 
-  const Avatar({Key? key, required this.name}) : super(key: key);
+  const _Avatar({Key? key, required this.name}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -151,6 +134,80 @@ class Avatar extends StatelessWidget {
 
   String _extractLabel(String name) {
     return name.substring(0, 1).toUpperCase();
+  }
+}
+
+class _Message extends StatelessWidget {
+  final ChatMessageDto message;
+  const _Message({Key? key, required this.message}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _Avatar(
+          name: message.author.name,
+        ),
+        Expanded(
+            child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(message.author.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(message.message)
+            ],
+          ),
+        ))
+      ],
+    );
+  }
+}
+
+class _MessageGeolocation extends StatelessWidget {
+  final ChatMessageGeolocationDto message;
+  const _MessageGeolocation({Key? key, required this.message})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _Avatar(
+          name: message.author.name,
+        ),
+        Expanded(
+            child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(message.author.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(
+                    width: 5,
+                  ),
+                  const Text('shared', style: TextStyle(color: Colors.grey))
+                ],
+              ),
+              const Text('geo location', style: TextStyle(color: Colors.grey)),
+              const SizedBox(
+                height: 5,
+              ),
+              const Text('Open on the map',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: ColorConstants.primaryColor)),
+            ],
+          ),
+        ))
+      ],
+    );
   }
 }
 

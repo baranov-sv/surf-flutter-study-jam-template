@@ -65,6 +65,5 @@ class ApplicationState extends ChangeNotifier {
       _nickname = nickname;
     }
     notifyListeners();
-    loadMessages();
   }
 }
