@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:surf_practice_chat_flutter/enums.dart';
 import 'package:surf_practice_chat_flutter/data/chat/repository/repository.dart';
 import 'package:surf_practice_chat_flutter/data/chat/models/message.dart';
+import 'package:surf_practice_chat_flutter/data/chat/models/geolocation.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ApplicationState extends ChangeNotifier {
   final ChatRepository chatRepository;
@@ -43,9 +45,18 @@ class ApplicationState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> sendMessage(String message) async {
+  Future<void> sendMessage(String message, Position? position) async {
     if (_nicknameState == ApplicationNicknameState.known) {
-      _messages = await chatRepository.sendMessage(_nickname!, message);
+      if (position != null) {
+        final location = ChatGeolocationDto(
+            latitude: position.latitude, longitude: position.longitude);
+        _messages = await chatRepository.sendGeolocationMessage(
+            nickname: _nickname!,
+            location: location,
+            message: message.isEmpty ? null : message);
+      } else {
+        _messages = await chatRepository.sendMessage(_nickname!, message);
+      }
 
       notifyListeners();
     }

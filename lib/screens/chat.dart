@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:surf_practice_chat_flutter/enums.dart';
 import 'package:surf_practice_chat_flutter/constants.dart';
 import 'package:surf_practice_chat_flutter/data/chat/application_state.dart';
 import 'package:surf_practice_chat_flutter/data/chat/models/message.dart';
+import 'package:surf_practice_chat_flutter/data/chat/models/geolocation.dart';
 import 'package:surf_practice_chat_flutter/data/chat/models/user.dart';
+import 'package:surf_practice_chat_flutter/services/location.dart';
 
 /// Chat screen templete. This is your starting point.
 class ChatScreen extends StatelessWidget {
@@ -192,29 +196,38 @@ class _MessageGeolocation extends StatelessWidget {
                   const SizedBox(
                     width: 5,
                   ),
-                  const Text('shared', style: TextStyle(color: Colors.grey))
+                  const Text('shared geo location',
+                      style: TextStyle(color: Colors.grey))
                 ],
               ),
-              const Text('geo location', style: TextStyle(color: Colors.grey)),
               const SizedBox(
                 height: 5,
               ),
-              const Text('Open on the map',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: ColorConstants.primaryColor)),
+              InkWell(
+                onTap: () => _openMap(message.location),
+                child: const Text('Open on the map',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: ColorConstants.primaryColor)),
+              ),
+              if (message.message.isNotEmpty) Text(message.message)
             ],
           ),
         ))
       ],
     );
   }
+
+  void _openMap(ChatGeolocationDto location) {
+    launch(
+        'https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}');
+  }
 }
 
 class MessageForm extends StatefulWidget {
   final ApplicationLoadingMessagesState loadingMessagesState;
   final ApplicationNicknameState nicknameState;
-  final Future<void> Function(String message) callback;
+  final Future<void> Function(String message, Position? position) callback;
 
   const MessageForm(
       {Key? key,
@@ -230,6 +243,7 @@ class MessageForm extends StatefulWidget {
 class _MessageFormState extends State<MessageForm> {
   final _controller = TextEditingController();
   var _sending = false;
+  Position? _position;
 
   @override
   void dispose() {
@@ -243,6 +257,20 @@ class _MessageFormState extends State<MessageForm> {
       padding: const EdgeInsets.all(8.0),
       child: Row(
         children: [
+          IconButton(
+              onPressed: () async {
+                final position = await _positionDialog(context);
+                setState(() {
+                  _position = position;
+                });
+              },
+              icon: Icon(
+                Icons.share_location_outlined,
+                color: _position != null ? ColorConstants.primaryColor : null,
+              )),
+          const SizedBox(
+            width: 5.0,
+          ),
           Expanded(
               child: TextField(
                   controller: _controller,
@@ -257,12 +285,47 @@ class _MessageFormState extends State<MessageForm> {
     );
   }
 
+  Future<Position?> _positionDialog(BuildContext context) async {
+    return await showDialog<Position>(
+        context: context,
+        builder: (_) {
+          return AlertDialog(
+            title: const Text(
+              'Share geo location?',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(context, null),
+                child: const Text(
+                  'No',
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  try {
+                    final position = await getCurrentPosition();
+                    Navigator.pop(context, position);
+                  } catch (err) {
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text(err.toString())));
+                  }
+                },
+                child: const Text(
+                  'Yes',
+                ),
+              )
+            ],
+          );
+        });
+  }
+
   Future<void> _sendMessage() async {
     setState(() {
       _sending = true;
     });
     try {
-      await widget.callback(_controller.text);
+      await widget.callback(_controller.text, _position);
+      _position = null;
       _controller.clear();
     } catch (err) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
